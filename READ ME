@@ -1,0 +1,9 @@
+.venv\Scripts\Activate.ps1
+#enters the venv
+
+pip install 'qiskit[machine-learning]>=2.0.0'
+#install's quizkit
+pip install matplotlib numpy scikit-learn pandas
+#installs matplotlib
+
+
