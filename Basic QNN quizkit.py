@@ -9,7 +9,6 @@ from qiskit.circuit import ParameterVector
 from qiskit_machine_learning.neural_networks import SamplerQNN
 
 
-
 algorithm_globals.random_seed = 42
 params1 = [Parameter("input1"), Parameter("weight1")]
 qc1 = QuantumCircuit(1)
@@ -17,14 +16,16 @@ qc1.h(0)
 qc1.ry(params1[0], 0)
 qc1.rx(params1[1], 0)
 print(qc1)
-#qc1.draw("mpl")
+# qc1.draw("mpl")
 
 observable1 = SparsePauliOp.from_list([("Y" * qc1.num_qubits, 1)])
 
 estimator_qnn = EstimatorQNN(
-    circuit=qc1, observables=observable1, input_params=[params1[0]], weight_params=[params1[1]]
+    circuit=qc1,
+    observables=observable1,
+    input_params=[params1[0]],
+    weight_params=[params1[1]],
 )
-
 
 
 inputs2 = ParameterVector("input", 2)
@@ -64,7 +65,9 @@ print(
     f"Number of trainable weights for SamplerQNN: {sampler_qnn.num_weights} \nWeights: {sampler_qnn_weights}"
 )
 
-estimator_qnn_forward = estimator_qnn.forward(estimator_qnn_input, estimator_qnn_weights)
+estimator_qnn_forward = estimator_qnn.forward(
+    estimator_qnn_input, estimator_qnn_weights
+)
 
 print(
     f"Forward pass result for EstimatorQNN: {estimator_qnn_forward}. \nShape: {estimator_qnn_forward.shape}"
@@ -137,7 +140,9 @@ estimator_qnn2 = EstimatorQNN(
     weight_params=[params1[1]],
 )
 
-estimator_qnn_forward2 = estimator_qnn2.forward(estimator_qnn_input, estimator_qnn_weights)
+estimator_qnn_forward2 = estimator_qnn2.forward(
+    estimator_qnn_input, estimator_qnn_weights
+)
 estimator_qnn_input_grad2, estimator_qnn_weight_grad2 = estimator_qnn2.backward(
     estimator_qnn_input, estimator_qnn_weights
 )
@@ -149,5 +154,4 @@ print(f"Backward output for EstimatorQNN2: {estimator_qnn_weight_grad2.shape}")
 
 qc2.draw(output="mpl")
 
-#plt.show()
-
+plt.show()
