@@ -14,8 +14,8 @@ from qiskit.quantum_info.operators import Operator
 
 (x_raw, y_raw), _ = mnist.load_data()
 
-print("Data features shape:", x_raw.shape)
-print("Data labels shape:", y_raw.shape)
+# print("Data features shape:", x_raw.shape)
+# print("Data labels shape:", y_raw.shape)
 
 # num_row x num_col gives the total number of images that will be plotted
 
@@ -69,7 +69,7 @@ ncol = x_raw.shape[1] * x_raw.shape[2]
 # We construct the dataset where each row represents an image each column a pixel
 x_flat = X_train.reshape(-1, ncol)  # (180, 784)
 
-print(x_flat.shape)
+# print(x_flat.shape)
 # We have 180 images in the training set described by 784 pixels
 
 # Rename the columns
@@ -87,9 +87,9 @@ pca = PCA(n_components=2)
 
 # Application of the PCA to the dataset
 principalComponents = pca.fit_transform(x_flat)
-print("The size of the new dataset (no label) is :", principalComponents.shape)
+# print("The size of the new dataset (no label) is :", principalComponents.shape)
 
-print(sum(pca.explained_variance_ratio_))
+# print(sum(pca.explained_variance_ratio_))
 
 data_pca = pd.DataFrame(
     data=principalComponents,
@@ -100,7 +100,7 @@ data_pca = pd.DataFrame(
 data_pca["Y"] = df_flat.iloc[:, -1:].to_numpy()
 
 # Visualise the first 5 rows of the new dataset
-print(data_pca.head())
+# print(data_pca.head())
 
 # scatter plot of the new representation
 cols = ["Component 1", "Component 2"]
@@ -183,12 +183,13 @@ def get_Sx(ang, circuit):  # attempting to fix this func
     q = QuantumRegister(2)
     circuit = QuantumCircuit(q)
     circuit = state_preparation(ang, circuit, [0, 1])
+    if circuit == True:
+        return circuit
     circuit.save_unitary()
 
     # job = execute(circuit, backend)
-    compiled_circuit = transpile(circuit, simulator)  # diffrent somehow
-    simulation = simulator.run(compiled_circuit)
-    result = simulation.result()
+    compiled_circuit = transpile(circuit, simulator)
+    result = simulator.run(compiled_circuit).result()
 
     # print(dir(result)) print the functions of result class
 
@@ -197,12 +198,8 @@ def get_Sx(ang, circuit):  # attempting to fix this func
 
     U = result.get_unitary(circuit)
     S = Operator(U)  # not used
-    print("Circuit unitary:\n", np.asarray(S).round(5))
-    
-    if circuit == True:
-        return circuit
-    else:
-        return S
+    # print("Circuit unitary:\n", np.asarray(S).round(5))
+    return S
 
 
 gate = get_Sx(
@@ -223,18 +220,16 @@ def linear_operator(param, circuit):
     qc.u(param[0], param[1], param[2], data_reg[0])
     qc.u(param[3], param[4], param[5], data_reg[1])
     qc.cx(data_reg[0], data_reg[1])
+    if circuit == True:
+        return qc
     qc.save_unitary()
 
     compiled_circuit = transpile(qc, simulator)
-    simulation = simulator.run(compiled_circuit)
-    result = simulation.result()
+    result = simulator.run(compiled_circuit).result()
 
     U = result.get_unitary(qc)
     G = Operator(U)  # not used
-    if circuit == True:
-        return qc
-    else:
-        return G
+    return G
 
 
 # linear_operator needs to be inisialised by defining a set of parameters
@@ -251,18 +246,17 @@ def R_gate(beta, circuit):
     control = QuantumRegister(1)
     qc = QuantumCircuit(control)
     qc.ry(beta, control)
-    qc.save_unitary()
+    if circuit == True:
+        return qc
 
+    qc.save_unitary()
     compiled_circuit = transpile(qc, simulator)
-    simulation = simulator.run(compiled_circuit)
-    result = simulation.result()
+    result = simulator.run(compiled_circuit).result()
 
     U = result.get_unitary(qc)
     R = Operator(U)
-    if circuit == True:
-        return qc
-    else:
-        return R
+
+    return R
 
 
 R = R_gate(np.pi, circuit=True)
@@ -274,18 +268,17 @@ def sigma(circuit):
     data = QuantumRegister(2)
     qc = QuantumCircuit(data)
     qc.id(data)
+    if circuit == True:
+        return qc
+
     qc.save_unitary()
 
     compiled_circuit = transpile(qc, simulator)
-    simulation = simulator.run(compiled_circuit)
-    result = simulation.result()
+    result = simulator.run(compiled_circuit).result()
 
     U = result.get_unitary(qc)
     I = Operator(U)
-    if circuit == True:
-        return qc
-    else:
-        return I
+    return I
 
 
 s = sigma(True)
@@ -317,8 +310,8 @@ def create_circuit_compact(parameters=None, x=None, pad=True):
 
     # Encode data into a quantum state
     S = get_Sx(ang=x, circuit=False)
-    print(np.asarray(S).round(5))
-    print(S)
+    # print(np.asarray(S).round(5))
+    # print(S)
 
     qc.unitary(S, data, label="$S_{x}$")  # problum with S
 
@@ -373,22 +366,21 @@ def create_circuit(parameters=None, x=None, pad=True):
     temp = QuantumRegister(2, "temp")
     c = ClassicalRegister(1)
     qc = QuantumCircuit(control, data, temp, c)
-    print("List the qubits in this circuit:", qc.qubits)
+    # print("List the qubits in this circuit:", qc.qubits)
     # print("List the classical bits in this circuit:", qc.clbits)
 
     S = get_Sx(ang=x, circuit=True)
     R = R_gate(beta, circuit=True)
     sig = sigma(circuit=True)
-    G1 = linear_operator(theta1, circuit=True) 
-    G2 = linear_operator(theta2, circuit=True) 
+    G1 = linear_operator(theta1, circuit=True)
+    G2 = linear_operator(theta2, circuit=True)
 
-    qc.compose(R.to_instruction(), qubits=control, inplace=True) # R has no CLbits
-    qc.compose(S.to_instruction(), qubits=data, inplace=True) # S has no CLbits
+    qc.compose(R.to_instruction(), qubits=control, inplace=True)  # R has no CLbits
+    qc.compose(S.to_instruction(), qubits=data, inplace=True)  # S has no CLbits
 
-    '''
+    """
     Type "Operator" does not have clbits. Only type "Instruction" and type "Gate" have clbits. 
-    '''
-
+    """
 
     qc.barrier()
     qc.cswap(control, data[0], temp[0])
@@ -425,22 +417,22 @@ qc = transpile(qc, optimization_level=3)
 # plt.show()
 
 
-def execute_circuit(parameters, x=None, shots=1000, print=False, backend=None):
-    simulator = AerSimulator()
+def execute_circuit(parameters, x=None, shots=1024, print_=False, backend=None):
+    if backend is None:
+        backend = AerSimulator()
 
-    circuit = create_circuit(parameters, x)
-    if print:
-        circuit.draw(output="mpl")
+    qc = create_circuit(parameters, x)
+    if print_:
+        qc.draw(output="mpl")
         plt.show()
 
-    qc.save_unitary()
-
-    compiled_circuit = transpile(circuit, simulator)
-    simulation = simulator.run(compiled_circuit)
+    compiled_circuit = transpile(qc, backend)
+    simulation = backend.run(compiled_circuit, shots=shots)
     result = simulation.result()
-    # result = execute(circuit, backend, shots=shots).result()
 
-    counts = result.get_counts(circuit)
+    # print(f"results: {result.results}")  # there are no results in result.results[]
+
+    counts = result.get_counts(qc)  # ERROR Here
     result = np.zeros(2)
     for key in counts:
         result[int(key, 2)] = counts[key]
@@ -471,7 +463,7 @@ def cost(params, X, labels):
 
 # Parameter initialisation
 init_params = np.repeat(1, n_parameters)
-print(init_params)
+# print(init_params)
 
 # Compute the prediction of the randomly intialised qSLP for the observations in the training set
 probs_train = [execute_circuit(init_params, x) for x in X_train]
@@ -512,4 +504,47 @@ acc_train = accuracy(Y_train, predictions_train)
 # loss
 loss = cost(init_params, X_train, Y_train)
 
-print("Random: | Cost: {:0.7f} | Acc train: {:0.3f}" "".format(loss, acc_train))
+# print("Random: | Cost: {:0.7f} | Acc train: {:0.3f}" "".format(loss, acc_train))
+
+batch_size = 10
+epochs = 10
+acc_final_tr = 0
+
+from scipy.optimize import minimize
+
+# define the optimiser
+# optimizer_step = COBYLA(maxiter=10, tol=0.01, disp=False)
+
+# define the initial set of parameters
+point = init_params
+
+# optimisation
+for i in range(epochs):
+    batch_index = np.random.randint(0, num_train, (batch_size,))
+    X_batch = X_train[batch_index]
+    Y_batch = Y_train[batch_index]
+
+    # print(
+    #     "Iter: {:5d} | Cost: {:0.7f} | Acc train: {:0.3f}"
+    #     "".format(i + 1, cost(point, X_train, Y_train), acc_train)
+    # )
+
+    obj_function = lambda params: cost(params, X_batch, Y_batch)
+    # point, value, nfev = optimizer_step.minimize(len(point), obj_function, initial_point=point)
+    point = minimize(obj_function, point, method="COBYLA", options={"maxiter": 10}).x
+
+    # Compute predictions on train and validation set
+    probs_train = [execute_circuit(point, x) for x in X_train]
+    # probs_val = [execute_circuit(point, x) for x in X_val]
+
+    predictions_train = [predict(p) for p in probs_train]
+    # predictions_val = [predict(p) for p in probs_val]
+
+    acc_train = accuracy(Y_train, predictions_train)
+    # acc_val = accuracy(Y_val, predictions_val)
+
+    if acc_final_tr <= acc_train:
+        best_param = point
+        acc_final_tr = acc_train
+        # acc_final_val = acc_val
+        iteration = i
