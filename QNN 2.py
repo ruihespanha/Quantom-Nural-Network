@@ -198,6 +198,7 @@ def get_Sx(ang, circuit):  # attempting to fix this func
     U = result.get_unitary(circuit)
     S = Operator(U)  # not used
     print("Circuit unitary:\n", np.asarray(S).round(5))
+    
     if circuit == True:
         return circuit
     else:
@@ -372,24 +373,30 @@ def create_circuit(parameters=None, x=None, pad=True):
     temp = QuantumRegister(2, "temp")
     c = ClassicalRegister(1)
     qc = QuantumCircuit(control, data, temp, c)
+    print("List the qubits in this circuit:", qc.qubits)
+    # print("List the classical bits in this circuit:", qc.clbits)
 
     S = get_Sx(ang=x, circuit=True)
     R = R_gate(beta, circuit=True)
     sig = sigma(circuit=True)
+    G1 = linear_operator(theta1, circuit=True) 
+    G2 = linear_operator(theta2, circuit=True) 
 
-    G1 = linear_operator(theta1, circuit=True)
-    G2 = linear_operator(theta2, circuit=True)
+    qc.compose(R.to_instruction(), qubits=control, inplace=True) # R has no CLbits
+    qc.compose(S.to_instruction(), qubits=data, inplace=True) # S has no CLbits
 
-    qc.compose(R, qubits=control, inplace=True)
-    qc.compose(S, qubits=data, inplace=True)
+    '''
+    Type "Operator" does not have clbits. Only type "Instruction" and type "Gate" have clbits. 
+    '''
+
 
     qc.barrier()
     qc.cswap(control, data[0], temp[0])
     qc.cswap(control, data[1], temp[1])
     qc.barrier()
 
-    qc.compose(G1, qubits=data, inplace=True)
-    qc.compose(G2, qubits=temp, inplace=True)
+    qc.compose(G1.to_instruction(), qubits=data, inplace=True)
+    qc.compose(G2.to_instruction(), qubits=temp, inplace=True)
 
     qc.barrier()
     qc.cswap(control, data[1], temp[1])
@@ -397,7 +404,7 @@ def create_circuit(parameters=None, x=None, pad=True):
 
     qc.barrier()
 
-    qc.compose(sig, qubits=data, inplace=True)
+    qc.compose(sig.to_instruction(), qubits=data, inplace=True)
     qc.barrier()
     qc.measure(data[0], c)
     return qc
@@ -419,8 +426,7 @@ qc = transpile(qc, optimization_level=3)
 
 
 def execute_circuit(parameters, x=None, shots=1000, print=False, backend=None):
-    if simulator is None:
-        simulator = AerSimulator()
+    simulator = AerSimulator()
 
     circuit = create_circuit(parameters, x)
     if print:
