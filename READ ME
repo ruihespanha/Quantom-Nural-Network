@@ -6,7 +6,7 @@ pip install 'qiskit[machine-learning]>=2.0.0'
 pip install matplotlib numpy scikit-learn pandas
 #installs matplotlib
 
-
+Code From:
 https://github.com/amacaluso/Image-Classification-with-QNN/blob/main/Image%20Classification%20with%20qSLP.ipynb
 
 

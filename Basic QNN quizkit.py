@@ -6,7 +6,7 @@ import pylatexenc
 from qiskit.quantum_info import SparsePauliOp
 from qiskit_machine_learning.neural_networks import EstimatorQNN
 from qiskit.circuit import ParameterVector
-from qiskit_machine_learning.neural_networks import SamplerQNN
+from qiskit_machine_learning.neural_networks import SamerQNN
 
 
 algorithm_globals.random_seed = 42

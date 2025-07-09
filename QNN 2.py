@@ -17,9 +17,6 @@ from qiskit.quantum_info.operators import Operator
 print("Data features shape:", x_raw.shape)
 print("Data labels shape:", y_raw.shape)
 
-# plot images
-num_row = 2
-num_col = 5
 # num_row x num_col gives the total number of images that will be plotted
 
 # Classes of interest. The QML model will be trained to distinguisg between 0 and 9
@@ -82,8 +79,6 @@ feat_cols = ["pixel" + str(i) for i in range(x_flat.shape[1])]
 df_flat = pd.DataFrame(x_flat, columns=feat_cols)
 df_flat["Y"] = Y_train
 
-# Visualise the first 5 rows of the dataset
-print(df_flat.head())
 
 # From sklearn.decomposition we import the class PCA that allows performing the Principal Component Analysis
 
@@ -182,7 +177,7 @@ def state_preparation(a, circuit, target):
     return circuit
 
 
-def get_Sx(ang):  # attempting to fix this func
+def get_Sx(ang, circuit):  # attempting to fix this func
     simulator = AerSimulator()
 
     q = QuantumRegister(2)
@@ -191,21 +186,324 @@ def get_Sx(ang):  # attempting to fix this func
     circuit.save_unitary()
 
     # job = execute(circuit, backend)
-    compiled_circuit = transpile(circuit, simulator)
-    simulation = simulator.run(compiled_circuit, shots=2048)
+    compiled_circuit = transpile(circuit, simulator)  # diffrent somehow
+    simulation = simulator.run(compiled_circuit)
     result = simulation.result()
 
-    print(dir(result))
+    # print(dir(result)) print the functions of result class
 
     # result = job.result()
     # print(f"result: {type(result)}")
 
-    U = result.get_unitary(circuit, 6)
-    S = Operator(U)
-    return S
+    U = result.get_unitary(circuit)
+    S = Operator(U)  # not used
+    print("Circuit unitary:\n", np.asarray(S).round(5))
+    if circuit == True:
+        return circuit
+    else:
+        return S
 
 
 gate = get_Sx(
-    ang=features[1]
+    ang=features[1], circuit=True
 )  # , x=None, pad=True, circuit=True) # ang in wrong datatype
-# gate.draw("mpl") #doesnt work
+# print(gate.draw())
+
+if False:
+    gate.draw(output="mpl")
+    plt.show()
+
+
+def linear_operator(param, circuit):
+    simulator = AerSimulator()
+
+    data_reg = QuantumRegister(2)
+    qc = QuantumCircuit(data_reg)
+    qc.u(param[0], param[1], param[2], data_reg[0])
+    qc.u(param[3], param[4], param[5], data_reg[1])
+    qc.cx(data_reg[0], data_reg[1])
+    qc.save_unitary()
+
+    compiled_circuit = transpile(qc, simulator)
+    simulation = simulator.run(compiled_circuit)
+    result = simulation.result()
+
+    U = result.get_unitary(qc)
+    G = Operator(U)  # not used
+    if circuit == True:
+        return qc
+    else:
+        return G
+
+
+# linear_operator needs to be inisialised by defining a set of parameters
+parameters = np.repeat(np.pi, n_param_L)
+G = linear_operator(parameters, True)
+# padded variables regulate the size of the input vector. If pad=yes, a normalised four-dimensional real vector is assumed
+# the variable 'circuit=True' set out whether the function outputs the unitary matrices or the quantum circuit
+
+# G.draw("mpl")
+
+
+def R_gate(beta, circuit):
+    simulator = AerSimulator()
+    control = QuantumRegister(1)
+    qc = QuantumCircuit(control)
+    qc.ry(beta, control)
+    qc.save_unitary()
+
+    compiled_circuit = transpile(qc, simulator)
+    simulation = simulator.run(compiled_circuit)
+    result = simulation.result()
+
+    U = result.get_unitary(qc)
+    R = Operator(U)
+    if circuit == True:
+        return qc
+    else:
+        return R
+
+
+R = R_gate(np.pi, circuit=True)
+# R.draw("mpl")
+
+
+def sigma(circuit):
+    simulator = AerSimulator()
+    data = QuantumRegister(2)
+    qc = QuantumCircuit(data)
+    qc.id(data)
+    qc.save_unitary()
+
+    compiled_circuit = transpile(qc, simulator)
+    simulation = simulator.run(compiled_circuit)
+    result = simulation.result()
+
+    U = result.get_unitary(qc)
+    I = Operator(U)
+    if circuit == True:
+        return qc
+    else:
+        return I
+
+
+s = sigma(True)
+# s.draw("mpl")
+
+
+# The following function creates a quantum circuit that takes as
+# input the input features x and the set of parameters
+
+
+def create_circuit_compact(parameters=None, x=None, pad=True):
+
+    # Total number of parameters in the quantum circuit
+    n_params = len(parameters)
+
+    # Parameters of quantum gates for control, data and temp register
+    beta = parameters[0]
+    theta1 = parameters[1 : int((n_params + 1) / 2)]
+    theta2 = parameters[int((n_params + 1) / 2) : int(n_params)]
+
+    # Initialization of the quantum circuit
+    control = QuantumRegister(1, "control")
+    data = QuantumRegister(2, "data")
+    temp = QuantumRegister(2, "temp")
+    c = ClassicalRegister(1)
+    qc = QuantumCircuit(control, data, temp, c)
+
+    ### STATE PREPARATION
+
+    # Encode data into a quantum state
+    S = get_Sx(ang=x, circuit=False)
+    print(np.asarray(S).round(5))
+    print(S)
+
+    qc.unitary(S, data, label="$S_{x}$")  # problum with S
+
+    # Initialisation of the control qubit
+    R = R_gate(beta, circuit=False)
+    qc.unitary(R, control, label="$R_{Y}(β)$")
+
+    qc.barrier()
+
+    ### LINEAR TRANSFORMATIONS IN SUPERPOSITION
+
+    # cswap between data and temp register
+    qc.cswap(control, data[0], temp[0])
+    qc.cswap(control, data[1], temp[1])
+
+    # Apply quantum gate G(ϴ) to the data register
+    G1 = linear_operator(theta1, circuit=False)
+    qc.unitary(G1, data, label="$G(θ_{1})$")
+
+    # Apply quantum gate G(ϴ) to the temp register
+    G2 = linear_operator(theta2, circuit=False)
+    qc.unitary(G2, temp, label="$G(θ_{2})$")
+
+    # cswap between data and temp register
+    qc.cswap(control, data[1], temp[1])
+    qc.cswap(control, data[0], temp[0])
+
+    qc.barrier()
+
+    ### SINGLE EXECUTION OF THE ACTIVATION FUNCTION
+
+    sig = sigma(circuit=False)
+    qc.unitary(sig, data, label="$Σ$")
+
+    qc.barrier()
+
+    ### MEASUREMENT
+
+    qc.measure(data[0], c)
+    return qc
+
+
+def create_circuit(parameters=None, x=None, pad=True):
+    n_params = len(parameters)
+
+    beta = parameters[0]
+    theta1 = parameters[1 : int((n_params + 1) / 2)]
+    theta2 = parameters[int((n_params + 1) / 2) : int(n_params)]
+
+    control = QuantumRegister(1, "control")
+    data = QuantumRegister(2, "data")
+    temp = QuantumRegister(2, "temp")
+    c = ClassicalRegister(1)
+    qc = QuantumCircuit(control, data, temp, c)
+
+    S = get_Sx(ang=x, circuit=True)
+    R = R_gate(beta, circuit=True)
+    sig = sigma(circuit=True)
+
+    G1 = linear_operator(theta1, circuit=True)
+    G2 = linear_operator(theta2, circuit=True)
+
+    qc.compose(R, qubits=control, inplace=True)
+    qc.compose(S, qubits=data, inplace=True)
+
+    qc.barrier()
+    qc.cswap(control, data[0], temp[0])
+    qc.cswap(control, data[1], temp[1])
+    qc.barrier()
+
+    qc.compose(G1, qubits=data, inplace=True)
+    qc.compose(G2, qubits=temp, inplace=True)
+
+    qc.barrier()
+    qc.cswap(control, data[1], temp[1])
+    qc.cswap(control, data[0], temp[0])
+
+    qc.barrier()
+
+    qc.compose(sig, qubits=data, inplace=True)
+    qc.barrier()
+    qc.measure(data[0], c)
+    return qc
+
+
+qc = create_circuit(parameters=range(n_parameters + 1), x=features[0])
+qc.draw(output="mpl")
+
+# qc=create_circuit(parameters=range(n_parameters+1), x=features[0])
+qc = create_circuit_compact(parameters=range(n_parameters + 1), x=features[0])
+# qc.draw(output="mpl")
+
+
+from qiskit.compiler import transpile
+
+qc = transpile(qc, optimization_level=3)
+# qc.draw(output="mpl")
+# plt.show()
+
+
+def execute_circuit(parameters, x=None, shots=1000, print=False, backend=None):
+    if simulator is None:
+        simulator = AerSimulator()
+
+    circuit = create_circuit(parameters, x)
+    if print:
+        circuit.draw(output="mpl")
+        plt.show()
+
+    qc.save_unitary()
+
+    compiled_circuit = transpile(circuit, simulator)
+    simulation = simulator.run(compiled_circuit)
+    result = simulation.result()
+    # result = execute(circuit, backend, shots=shots).result()
+
+    counts = result.get_counts(circuit)
+    result = np.zeros(2)
+    for key in counts:
+        result[int(key, 2)] = counts[key]
+    result /= shots
+    return result[1]
+
+
+def binary_crossentropy(labels, predictions):
+    """
+    Compare a set of predictions and the real values to compute the Binary Crossentropy for a binary target variable
+    :param labels: true values for a binary target variable.
+    :param predictions: predicted probabilities for a binary target variable
+    :return: the value of the binary cross entropy. The lower the value is, the better are the predictions.
+    """
+    loss = 0
+    for l, p in zip(labels, predictions):
+        # print(l,p)
+        loss = loss - l * np.log(np.max([p, 1e-8]))
+
+    loss = loss / len(labels)
+    return loss
+
+
+def cost(params, X, labels):
+    predictions = [execute_circuit(params, x) for x in X]
+    return binary_crossentropy(labels, predictions)
+
+
+# Parameter initialisation
+init_params = np.repeat(1, n_parameters)
+print(init_params)
+
+# Compute the prediction of the randomly intialised qSLP for the observations in the training set
+probs_train = [execute_circuit(init_params, x) for x in X_train]
+
+
+def predict(probas):
+    return (probas >= 0.5) * 1
+
+
+# Given the probabilities for the two classes, that are computed as the two basis states
+# of the first qubit of the data register, the function 'predict' computes the predicted class
+# of the target variable
+predictions_train = [predict(p) for p in probs_train]
+
+# Once we have the true and the predicted classes we can compute
+# the accuracy and the cross entropy (loss) of the model given the initial parametrisation
+
+
+def accuracy(labels, predictions):
+    """
+    Compare a set of predictions and the real values to compute the Accuracy for a binary target variable
+    :param labels: true values for a binary target variable.
+    :param predictions: predicted values for a binary target variable
+    :return: the value of the binary cross entropy. The lower the value is, the better are the predictions.
+    """
+    loss = 0
+    for l, p in zip(labels, predictions):
+        if abs(l - p) < 1e-5:
+            loss = loss + 1
+    loss = loss / len(labels)
+
+    return loss
+
+
+# accuracy
+acc_train = accuracy(Y_train, predictions_train)
+
+# loss
+loss = cost(init_params, X_train, Y_train)
+
+print("Random: | Cost: {:0.7f} | Acc train: {:0.3f}" "".format(loss, acc_train))
