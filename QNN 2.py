@@ -14,8 +14,8 @@ from qiskit.quantum_info.operators import Operator
 
 (x_raw, y_raw), _ = mnist.load_data()
 
-# print("Data features shape:", x_raw.shape)
-# print("Data labels shape:", y_raw.shape)
+print("Data features shape:", x_raw.shape)
+print("Data labels shape:", y_raw.shape)
 
 # num_row x num_col gives the total number of images that will be plotted
 
@@ -69,7 +69,7 @@ ncol = x_raw.shape[1] * x_raw.shape[2]
 # We construct the dataset where each row represents an image each column a pixel
 x_flat = X_train.reshape(-1, ncol)  # (180, 784)
 
-# print(x_flat.shape)
+print(x_flat.shape)
 # We have 180 images in the training set described by 784 pixels
 
 # Rename the columns
@@ -87,9 +87,9 @@ pca = PCA(n_components=2)
 
 # Application of the PCA to the dataset
 principalComponents = pca.fit_transform(x_flat)
-# print("The size of the new dataset (no label) is :", principalComponents.shape)
+print("The size of the new dataset (no label) is :", principalComponents.shape)
 
-# print(sum(pca.explained_variance_ratio_))
+print(sum(pca.explained_variance_ratio_))
 
 data_pca = pd.DataFrame(
     data=principalComponents,
@@ -100,7 +100,7 @@ data_pca = pd.DataFrame(
 data_pca["Y"] = df_flat.iloc[:, -1:].to_numpy()
 
 # Visualise the first 5 rows of the new dataset
-# print(data_pca.head())
+print(data_pca.head())
 
 # scatter plot of the new representation
 cols = ["Component 1", "Component 2"]
@@ -310,8 +310,8 @@ def create_circuit_compact(parameters=None, x=None, pad=True):
 
     # Encode data into a quantum state
     S = get_Sx(ang=x, circuit=False)
-    # print(np.asarray(S).round(5))
-    # print(S)
+    print(np.asarray(S).round(5))
+    print(S)
 
     qc.unitary(S, data, label="$S_{x}$")  # problum with S
 
@@ -463,7 +463,7 @@ def cost(params, X, labels):
 
 # Parameter initialisation
 init_params = np.repeat(1, n_parameters)
-# print(init_params)
+print(init_params)
 
 # Compute the prediction of the randomly intialised qSLP for the observations in the training set
 probs_train = [execute_circuit(init_params, x) for x in X_train]
@@ -504,7 +504,7 @@ acc_train = accuracy(Y_train, predictions_train)
 # loss
 loss = cost(init_params, X_train, Y_train)
 
-# print("Random: | Cost: {:0.7f} | Acc train: {:0.3f}" "".format(loss, acc_train))
+print("Random: | Cost: {:0.7f} | Acc train: {:0.3f}" "".format(loss, acc_train))
 
 batch_size = 10
 epochs = 10
@@ -524,10 +524,10 @@ for i in range(epochs):
     X_batch = X_train[batch_index]
     Y_batch = Y_train[batch_index]
 
-    # print(
-    #     "Iter: {:5d} | Cost: {:0.7f} | Acc train: {:0.3f}"
-    #     "".format(i + 1, cost(point, X_train, Y_train), acc_train)
-    # )
+    print(
+        "Iter: {:5d} | Cost: {:0.7f} | Acc train: {:0.3f}"
+        "".format(i + 1, cost(point, X_train, Y_train), acc_train)
+    )
 
     obj_function = lambda params: cost(params, X_batch, Y_batch)
     # point, value, nfev = optimizer_step.minimize(len(point), obj_function, initial_point=point)
