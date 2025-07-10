@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 IMG_SIZE = 64
 
 
-folder = R"C:\Users\ruihe\Quantom Nural Network\Training_Data" + "\\"
+folder = R"C:\Users\siddharthvedam\Downloads\Track 7---SRA\Quantom-Nural-Network\ALL DATA"
 print(folder)
 
 
